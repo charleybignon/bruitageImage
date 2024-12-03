@@ -2,17 +2,249 @@ import matplotlib.pyplot as plt
 from snr import calculate_snr, calculate_snr_gain
 from noise import add_noise_additive, add_noise_salt_pepper, add_noise_multiplicative
 from denoising import denoise_image_median, convolve_image
+from contours import detecter_contours_et_filtrer
 from utils import load_image
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 
-def main():
+def menu_principal():
+    while True:
+        print("\n=== Menu Principal ===")
+        print("1. Charger et comparer SNR des images bruitées")
+        print("2. Ajouter du bruit à une image")
+        print("3. Débruiter une image bruitée")
+        print("4. Détecter les contours et filtrer l'image")
+        print("5. Quitter")
+        choix = input("Choisissez une option : ")
+        
+        if choix == "1":
+            load_and_compare_snr()
+        elif choix == "2":
+            menu_ajouter_bruit()
+        elif choix == "3":
+            menu_debruiter_image()
+        elif choix == "4":
+            detecter_contours_et_filtrer()
+        elif choix == "5":
+            print("Fin du programme de traitement d'image !")
+            break
+        else:
+            print("Choix invalide. Veuillez réessayer.")
+
+def menu_ajouter_bruit():
+    while True:
+        print("\n=== Menu Ajouter du bruit ===")
+        print("1 Choisir le type de bruit et la variance/niveau de bruit")
+        print("2 Comparer différents bruitages avec un graphique")
+        print("3 Retour au menu principal")
+        choix = input("Choisissez une option : ")
+
+        if choix == "1":
+            choisir_bruit()
+        elif choix == "2":
+            compare_noises()
+        elif choix == "3":
+            break
+        else:
+            print("Choix invalide. Veuillez réessayer.")
+
+def menu_debruiter_image():
+    while True:
+        print("\n=== Menu Débruiter une image ===")
+        print("1 Visualiser le débruitage d'une image bruitée")
+        print("2 Comparer les débruitages avec un graphique")
+        print("3 Retour au menu principal")
+        choix = input("Choisissez une option : ")
+
+        if choix == "1":
+            menu_visualiser_debruitage()
+        elif choix == "2":
+            menu_compare_denoises()
+        elif choix == "3":
+            break
+        else:
+            print("Choix invalide. Veuillez réessayer.")
+
+def menu_visualiser_debruitage():
+    while True:
+        print("\n=== Visualiser le débruitage ===")
+        print("1 d'une image bruitée par bruit additif")
+        print("2 d'une image bruitée par bruit s&p")
+        print("3 d'une image bruitée par bruit multiplicatif")
+        print("4 Retour")
+        choix = input("Choisissez une option : ")
+
+        if choix == "1":
+            denoise_image(type="additif")
+        elif choix == "2":
+            denoise_image(type="s&p")
+        elif choix == "3":
+            denoise_image(type="multiplicatif")
+        elif choix == "4":
+            break
+        else:
+            print("Choix invalide. Veuillez réessayer.")
+
+def menu_compare_denoises():
+    while True:
+        print("\n=== Comparer les débruitages ===")
+        print("1 d'une image bruitée par bruit s&p")
+        print("2 par convolution 3x3 et 5x5")
+        print("3 Retour")
+        choix = input("Choisissez une option : ")
+
+        if choix == "1":
+            compare_denoise_sp()
+        elif choix == "2":
+            compare_denoise_gaussian()
+        elif choix == "3":
+            break
+        else:
+            print("Choix invalide. Veuillez réessayer.")
+
+def choisir_bruit():
+    print("\n=== Choisir le type de bruit ===")
+    print("1. Bruit Gaussien (additif)")
+    print("2. Bruit Sel et Poivre")
+    print("3. Bruit Multiplicatif")
+    print("4. Les 3 bruits")
+    choix = input("Choisissez une option : ")
+
+    if choix in ["1", "2", "3", "4"]:
+        try:
+            variance = float(input("Entrez la variance ou le niveau de bruit (ex: 0.1): "))
+            if variance <= 0:
+                raise ValueError("La variance doit être positive.")
+        except ValueError as e:
+            print(f"Entrée invalide : {e}")
+            return
+        image_reference_path = "data/image_reference1.png"
+        image_reference = load_image(image_reference_path, as_gray=True)
+
+        def afficher_comparaison(reference, bruitée, titre_bruit, snr):
+            """Affiche l'image de référence à gauche et l'image bruitée à droite"""
+            fig, axs = plt.subplots(1, 2, figsize=(10, 5))
+            axs[0].imshow(reference, cmap='gray')
+            axs[0].set_title("Image de Référence")
+            axs[0].axis('off')
+            
+            axs[1].imshow(bruitée, cmap='gray')
+            axs[1].set_title(f"{titre_bruit} (SNR: {snr:.2f})")
+            axs[1].axis('off')
+            
+            plt.suptitle(f"Comparaison : Référence vs {titre_bruit}")
+            plt.show()
+
+        if choix == "1":
+            noisy_image = add_noise_additive(image_reference, var=variance)
+            bruit_type = "Bruit Gaussien"
+            snr_noisy = calculate_snr(image_reference, noisy_image)
+            afficher_comparaison(image_reference, noisy_image, bruit_type, snr_noisy)
+
+        elif choix == "2":
+            noisy_image = add_noise_salt_pepper(image_reference, amount=variance)
+            bruit_type = "Bruit Sel et Poivre"
+            snr_noisy = calculate_snr(image_reference, noisy_image)
+            afficher_comparaison(image_reference, noisy_image, bruit_type, snr_noisy)
+
+        elif choix == "3":
+            noisy_image = add_noise_multiplicative(image_reference, var=variance)
+            bruit_type = "Bruit Multiplicatif"
+            snr_noisy = calculate_snr(image_reference, noisy_image)
+            afficher_comparaison(image_reference, noisy_image, bruit_type, snr_noisy)
+
+        elif choix == "4":
+            # Bruit Gaussien
+            noisy_gaussian = add_noise_additive(image_reference, var=variance)
+            snr_gaussian = calculate_snr(image_reference, noisy_gaussian)
+            
+            # Bruit Sel et Poivre
+            noisy_sp = add_noise_salt_pepper(image_reference, amount=variance)
+            snr_sp = calculate_snr(image_reference, noisy_sp)
+            
+            # Bruit Multiplicatif
+            noisy_multiplicative = add_noise_multiplicative(image_reference, var=variance)
+            snr_multiplicative = calculate_snr(image_reference, noisy_multiplicative)
+            
+            # Afficher les résultats côte à côte
+            fig, axs = plt.subplots(1, 4, figsize=(20, 5))
+            axs[0].imshow(image_reference, cmap='gray')
+            axs[0].set_title("Référence")
+            axs[0].axis('off')
+            
+            axs[1].imshow(noisy_gaussian, cmap='gray')
+            axs[1].set_title(f"Bruit Gaussien\n(SNR: {snr_gaussian:.2f})")
+            axs[1].axis('off')
+            
+            axs[2].imshow(noisy_sp, cmap='gray')
+            axs[2].set_title(f"Sel et Poivre\n(SNR: {snr_sp:.2f})")
+            axs[2].axis('off')
+            
+            axs[3].imshow(noisy_multiplicative, cmap='gray')
+            axs[3].set_title(f"Multiplicatif\n(SNR: {snr_multiplicative:.2f})")
+            axs[3].axis('off')
+            
+            plt.suptitle("Comparaison : Référence et Bruits")
+            plt.show()
+
+    else:
+        print("Choix invalide. Retour au menu précédent.")
+
+def compare_noises():
     # Charger l'image de référence
-    image_path = "data/image_reference1.png" 
-    image_reference = load_image(image_path, as_gray=True)
+    image_reference_path = "data/image_reference1.png"
+    image_reference = load_image(image_reference_path, as_gray=True)
 
-    # Charger plusieurs images bruitées et calculer leurs SNR
+    # Tester différents niveaux de bruit
+    variances = [0.01, 0.02, 0.05, 0.08, 0.1]
+    results_gaussian = []
+    results_salt_pepper = []
+    results_multiplicative = []
+
+    # Itérer sur chaque variance
+    for var in variances:
+        # Bruit Gaussien
+        noisy_gaussian = add_noise_additive(image_reference, var=var)
+        snr_gaussian = calculate_snr(image_reference, noisy_gaussian)
+        results_gaussian.append({"Variance": var, "SNR": snr_gaussian, "Type": "Gaussien"})
+
+        # Bruit Sel et Poivre
+        noisy_sp = add_noise_salt_pepper(image_reference, amount=var)
+        snr_sp = calculate_snr(image_reference, noisy_sp)
+        results_salt_pepper.append({"Variance": var, "SNR": snr_sp, "Type": "Sel et Poivre"})
+
+        # Bruit Multiplicatif
+        noisy_multiplicative = add_noise_multiplicative(image_reference, var=var)
+        snr_multiplicative = calculate_snr(image_reference, noisy_multiplicative)
+        results_multiplicative.append({"Variance": var, "SNR": snr_multiplicative, "Type": "Multiplicatif"})
+
+    # Combiner les résultats
+    all_results = results_gaussian + results_salt_pepper + results_multiplicative
+    df_results = pd.DataFrame(all_results)
+
+    # Tracer les résultats
+    plt.figure(figsize=(10, 6))
+
+    # Ajouter une courbe pour chaque type de bruit
+    for bruit_type in df_results["Type"].unique():
+        subset = df_results[df_results["Type"] == bruit_type]
+        plt.plot(subset["Variance"], subset["SNR"], marker='o', label=f"SNR ({bruit_type})")
+
+    # Configurer le graphique
+    plt.title("SNR en fonction des Variances pour différents Bruitages", fontsize=14)
+    plt.xlabel("Variance (Niveau de bruit)", fontsize=12)
+    plt.ylabel("SNR", fontsize=12)
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+
+    # Afficher le graphique
+    plt.show()
+
+def load_and_compare_snr():
+    image_reference_path = "data/image_reference1.png"
+    image_reference = load_image(image_reference_path, as_gray=True)
+
     images_bruitees = [
         {"filename": "data/image1_bruitee_snr_41.8939.png", "expected_snr": 41.8939},
         {"filename": "data/image1_bruitee_snr_36.1414.png", "expected_snr": 36.1414},
@@ -30,13 +262,9 @@ def main():
         noisy_image = load_image(image["filename"], as_gray=True)
         snr_calculated = calculate_snr(image_reference, noisy_image)
         snr_difference = abs(snr_calculated - image["expected_snr"])
-        
-        # Vérifier si la différence de SNR est proche de zéro
-        if snr_difference < 0.001:
-            message = "Calcul du SNR validé"
-        else:
-            message = f"Différence de SNR: {snr_difference:.4f}"
-        
+
+        message = "Calcul du SNR validé" if snr_difference < 0.001 else f"Différence de SNR: {snr_difference:.4f}"
+
         results.append({
             "Nom du fichier": image["filename"],
             "SNR attendu": image["expected_snr"],
@@ -48,221 +276,123 @@ def main():
     df_comparison = pd.DataFrame(results)
     print(df_comparison)
 
-    # Ajouter du bruit et calculer le SNR
-    noisy_gaussian = add_noise_additive(image_reference, var=0.10)
-    snr_gaussian = calculate_snr(image_reference, noisy_gaussian)
+def denoise_image(type):
+    """
+    Fonction pour ajouter un bruit spécifique à une image de référence, puis la débruiter 
+    en utilisant deux méthodes (filtre médian et convolution).
+    
+    Args:
+        type (str): Le type de bruit à ajouter ('additif' ou 's&p' ou 'multiplicatif').
+    """
+    # Charger l'image de référence
+    image_reference_path = "data/lenaNB.tiff"
+    image_reference = load_image(image_reference_path, as_gray=True)
 
-    noisy_salt_pepper = add_noise_salt_pepper(image_reference, amount=0.15)
-    snr_salt_pepper = calculate_snr(image_reference, noisy_salt_pepper)
+    # Ajouter du bruit en fonction du type
+    if type == "additif":
+        noisy_image = add_noise_additive(image_reference, var=0.05)
+        noise_title = "additif"
+    elif type == "s&p":
+        noisy_image = add_noise_salt_pepper(image_reference, amount=0.05)
+        noise_title = "Sel & Poivre"
+    elif type == "multiplicatif":
+        noisy_image = add_noise_multiplicative(image_reference, var=0.05)
+        noise_title = "multiplicatif"
+    else:
+        raise ValueError("Type de bruit non reconnu. Utilisez 'additif' ou 's&p' ou 'multiplicatif'.")
 
-    noisy_multiplicative = add_noise_multiplicative(image_reference,var=0.10)
-    snr_multiplicative = calculate_snr(image_reference, noisy_multiplicative)
+    # Calcul du SNR de l'image bruitée
+    snr_noisy = calculate_snr(image_reference, noisy_image)
 
-    # Afficher les images bruitées
-    fig, ax = plt.subplots(1, 4, figsize=(18, 6))
-    ax[0].imshow(image_reference, cmap='gray')
-    ax[0].set_title("Image de référence")
-    ax[0].axis('off')
+    # Débruitage avec un filtre médian
+    denoised_median = denoise_image_median(noisy_image, filter_size=3)
+    snr_denoised_median = calculate_snr(image_reference, denoised_median)
 
-    ax[1].imshow(noisy_gaussian, cmap='gray')
-    ax[1].set_title(f"Image bruitée (Gaussien, SNR={snr_gaussian:.2f})")
-    ax[1].axis('off')
-
-    ax[2].imshow(noisy_salt_pepper, cmap='gray')
-    ax[2].set_title(f"Image bruitée (Sel et Poivre, SNR={snr_salt_pepper:.2f})")
-    ax[2].axis('off')
-
-    ax[3].imshow(noisy_multiplicative, cmap='gray')
-    ax[3].set_title(f"Image bruitée (multiplicatif, SNR={snr_multiplicative:.2f})")
-    ax[3].axis('off')
-
-    plt.tight_layout()
-    plt.show()
-
-    # Charger la nouvelle image de référence
-    image_path = "data/lenaNB.tiff" 
-    image_reference = load_image(image_path, as_gray=True)
-
-    # Ajouter du bruit avec une variance élevée
-    noisy_image_high_noise = add_noise_salt_pepper(image_reference, amount=0.05)
-
-    # Calculer le SNR de l'image bruitée
-    snr_high_noise = calculate_snr(image_reference, noisy_image_high_noise)
-
-    # Débruiter avec le filtre médian
-    denoised_median_high_noise = denoise_image_median(noisy_image_high_noise, filter_size=3)
-    snr_denoised_median_high_noise = calculate_snr(image_reference, denoised_median_high_noise)
-
-    # Débruiter avec la convolution
+    # Débruitage avec convolution
     kernel = np.ones((5, 5)) / 25
-    denoised_convolution_high_noise = convolve_image(noisy_image_high_noise, kernel)
-    snr_denoised_convolution_high_noise = calculate_snr(image_reference, denoised_convolution_high_noise)
+    denoised_convolution = convolve_image(noisy_image, kernel)
+    snr_denoised_convolution = calculate_snr(image_reference, denoised_convolution)
 
-    # Afficher les images côte à côte
+    # Affichage des résultats
     fig, ax = plt.subplots(1, 4, figsize=(24, 6))
 
     # Image de référence
     ax[0].imshow(image_reference, cmap='gray')
-    ax[0].set_title("Image de référence")
+    ax[0].set_title("Image de Référence")
     ax[0].axis('off')
 
     # Image bruitée
-    ax[1].imshow(noisy_image_high_noise, cmap='gray')
-    ax[1].set_title(f"Bruitée (s&p) (SNR={snr_high_noise:.2f})")
+    ax[1].imshow(noisy_image, cmap='gray')
+    ax[1].set_title(f"Bruitée ({noise_title})\nSNR = {snr_noisy:.2f}")
     ax[1].axis('off')
 
-    # Image débruitée (Médian)
-    ax[2].imshow(denoised_median_high_noise, cmap='gray')
-    ax[2].set_title(f"Débruitée Médian (SNR={snr_denoised_median_high_noise:.2f})")
+    # Image débruitée avec filtre médian
+    ax[2].imshow(denoised_median, cmap='gray')
+    ax[2].set_title(f"Débruitée (Filtre Médian)\nSNR = {snr_denoised_median:.2f}")
     ax[2].axis('off')
 
-    # Image débruitée (Convolution)
-    ax[3].imshow(denoised_convolution_high_noise, cmap='gray')
-    ax[3].set_title(f"Débruitée Convolution (SNR={snr_denoised_convolution_high_noise:.2f})")
+    # Image débruitée avec convolution
+    ax[3].imshow(denoised_convolution, cmap='gray')
+    ax[3].set_title(f"Débruitée (Convolution)\nSNR = {snr_denoised_convolution:.2f}")
     ax[3].axis('off')
 
-    # Afficher les résultats
+    # Ajustement de la mise en page et affichage
     plt.tight_layout()
     plt.show()
 
-    # Ajouter du bruit additif avec une variance élevée
-    noisy_image_high_noise = add_noise_additive(image_reference, var=0.01)
-
-    # Calculer le SNR de l'image bruitée
-    snr_high_noise = calculate_snr(image_reference, noisy_image_high_noise)
-
-    # Débruiter avec le filtre médian
-    denoised_median_high_noise = denoise_image_median(noisy_image_high_noise, filter_size=3)
-    snr_denoised_median_high_noise = calculate_snr(image_reference, denoised_median_high_noise)
-
-    # Débruiter avec la convolution
-    kernel = np.ones((5, 5)) / 25
-    denoised_convolution_high_noise = convolve_image(noisy_image_high_noise, kernel)
-    snr_denoised_convolution_high_noise = calculate_snr(image_reference, denoised_convolution_high_noise)
-
-    # Afficher les images côte à côte
-    fig, ax = plt.subplots(1, 4, figsize=(24, 6))
-
-    # Image de référence
-    ax[0].imshow(image_reference, cmap='gray')
-    ax[0].set_title("Image de référence")
-    ax[0].axis('off')
-
-    # Image bruitée
-    ax[1].imshow(noisy_image_high_noise, cmap='gray')
-    ax[1].set_title(f"Bruitée (additif) (SNR={snr_high_noise:.2f})")
-    ax[1].axis('off')
-
-    # Image débruitée (Médian)
-    ax[2].imshow(denoised_median_high_noise, cmap='gray')
-    ax[2].set_title(f"Débruitée Médian (SNR={snr_denoised_median_high_noise:.2f})")
-    ax[2].axis('off')
-
-    # Image débruitée (Convolution)
-    ax[3].imshow(denoised_convolution_high_noise, cmap='gray')
-    ax[3].set_title(f"Débruitée Convolution (SNR={snr_denoised_convolution_high_noise:.2f})")
-    ax[3].axis('off')
-
-    # Afficher les résultats
-    plt.tight_layout()
-    plt.show()
-
-    # Ajouter du bruit multiplicatif avec une variance élevée
-    noisy_image_multiplicative = add_noise_multiplicative(image_reference, var=0.05)
-
-    # Calculer le SNR de l'image bruitée
-    snr_multiplicative = calculate_snr(image_reference, noisy_image_multiplicative)
-
-    # Débruiter avec le filtre médian
-    denoised_median_multiplicative = denoise_image_median(noisy_image_multiplicative, filter_size=3)
-    snr_denoised_median_multiplicative = calculate_snr(image_reference, denoised_median_multiplicative)
-
-    # Débruiter avec la convolution
-    kernel = np.ones((5, 5)) / 25
-    denoised_convolution_multiplicative = convolve_image(noisy_image_multiplicative, kernel)
-    snr_denoised_convolution_multiplicative = calculate_snr(image_reference, denoised_convolution_multiplicative)
-
-    # Afficher les images côte à côte
-    fig, ax = plt.subplots(1, 4, figsize=(24, 6))
-
-    # Image de référence
-    ax[0].imshow(image_reference, cmap='gray')
-    ax[0].set_title("Image de référence")
-    ax[0].axis('off')
-
-    # Image bruitée
-    ax[1].imshow(noisy_image_multiplicative, cmap='gray')
-    ax[1].set_title(f"Bruitée multiplicatif (SNR={snr_multiplicative:.2f})")
-    ax[1].axis('off')
-
-    # Image débruitée (Médian)
-    ax[2].imshow(denoised_median_multiplicative, cmap='gray')
-    ax[2].set_title(f"Débruitée Médian (SNR={snr_denoised_median_multiplicative:.2f})")
-    ax[2].axis('off')
-
-    # Image débruitée (Convolution)
-    ax[3].imshow(denoised_convolution_multiplicative, cmap='gray')
-    ax[3].set_title(f"Débruitée Convolution (SNR={snr_denoised_convolution_multiplicative:.2f})")
-    ax[3].axis('off')
-
-    # Afficher les résultats
-    plt.tight_layout()
-    plt.show()
-
-
-   # Tester différents niveaux de bruit gaussien
-    variances = [0.01, 0.05, 0.1]
+def compare_denoise_sp():
     results = []
+
+    # Charger l'image de référence
+    image_reference_path = "data/lenaNB.tiff"
+    image_reference = load_image(image_reference_path, as_gray=True)
+
+    variances = [0.01, 0.05, 0.1]   
     for var in variances:
+        # Ajouter du bruit sel et poivre
         noisy_image = add_noise_salt_pepper(image_reference, amount=var)
         snr_noisy = calculate_snr(image_reference, noisy_image)
 
         # Débruiter avec le filtre médian
         denoised_median = denoise_image_median(noisy_image, filter_size=3)
         snr_denoised_median = calculate_snr(image_reference, denoised_median)
-        snr_gain_median = calculate_snr_gain(snr_noisy, snr_denoised_median)
 
         # Débruiter avec la convolution
         kernel = np.ones((5, 5)) / 25
         denoised_convolution = convolve_image(noisy_image, kernel)
         snr_denoised_convolution = calculate_snr(image_reference, denoised_convolution)
-        snr_gain_convolution = calculate_snr_gain(snr_noisy, snr_denoised_convolution)
 
-        # Ajouter les résultats pour chaque méthode
         results.append({
             "Variance": var,
             "SNR bruité (S&P)": snr_noisy,
             "SNR débruité (Médian)": snr_denoised_median,
-            "Gain SNR (Médian)": snr_gain_median,
             "SNR débruité (Convolution)": snr_denoised_convolution,
-            "Gain SNR (Convolution)": snr_gain_convolution,
         })
 
-    # Créer un DataFrame pour exploiter les données
     df_results = pd.DataFrame(results)
 
     # Tracer les résultats
     plt.figure(figsize=(10, 6))
-
-    # SNR après débruitage pour chaque méthode
     plt.plot(df_results["Variance"], df_results["SNR bruité (S&P)"], marker='o', label="SNR bruité (S&P)", color='blue')
     plt.plot(df_results["Variance"], df_results["SNR débruité (Médian)"], marker='o', label="SNR débruité (Médian)", color='green')
     plt.plot(df_results["Variance"], df_results["SNR débruité (Convolution)"], marker='o', label="SNR débruité (Convolution)", color='orange')
 
-    # Configurer le graphique
-    plt.title("SNR avant et après débruitage pour différents niveaux de bruit", fontsize=14)
+    plt.title("SNR avant et après débruitage pour différents niveaux de bruit (S&P)", fontsize=14)
     plt.xlabel("Variance (Niveau de bruit)", fontsize=12)
     plt.ylabel("SNR", fontsize=12)
     plt.legend()
     plt.grid(True)
     plt.tight_layout()
-
-    # Afficher le graphique
     plt.show()
 
-    # Tester différents niveaux de bruit gaussien
-    variances = [0.01, 0.05, 0.1]
+def compare_denoise_gaussian():
     results = []
+
+    # Charger l'image de référence
+    image_reference_path = "data/lenaNB.tiff"
+    image_reference = load_image(image_reference_path, as_gray=True)
+
+    variances = [0.01, 0.05, 0.1]
     for var in variances:
         # Ajouter du bruit gaussien
         noisy_image = add_noise_additive(image_reference, var=var)
@@ -278,7 +408,6 @@ def main():
         denoised_5x5 = convolve_image(noisy_image, kernel_5x5)
         snr_denoised_5x5 = calculate_snr(image_reference, denoised_5x5)
 
-        # Ajouter les résultats
         results.append({
             "Variance": var,
             "SNR bruité (Gaussien)": snr_noisy,
@@ -286,28 +415,22 @@ def main():
             "SNR débruité (Convolution 5x5)": snr_denoised_5x5,
         })
 
-    # Créer un DataFrame pour exploiter les données
     df_results = pd.DataFrame(results)
 
     # Tracer les résultats
     plt.figure(figsize=(10, 6))
-
-    # SNR pour chaque méthode
     plt.plot(df_results["Variance"], df_results["SNR bruité (Gaussien)"], marker='o', label="SNR bruité (Gaussien)", color='blue')
     plt.plot(df_results["Variance"], df_results["SNR débruité (Convolution 3x3)"], marker='o', label="SNR débruité (Convolution 3x3)", color='green')
     plt.plot(df_results["Variance"], df_results["SNR débruité (Convolution 5x5)"], marker='o', label="SNR débruité (Convolution 5x5)", color='orange')
 
-    # Configurer le graphique
     plt.title("SNR avant et après débruitage (Bruit Gaussien)", fontsize=14)
     plt.xlabel("Variance (Niveau de bruit)", fontsize=12)
     plt.ylabel("SNR", fontsize=12)
     plt.legend()
     plt.grid(True)
     plt.tight_layout()
-
-    # Afficher le graphique
     plt.show()
 
 
 if __name__ == "__main__":
-    main()
+    menu_principal()
