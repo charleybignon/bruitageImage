@@ -13,7 +13,7 @@ def menu_principal():
         print("1. Charger et comparer SNR des images bruitées")
         print("2. Ajouter du bruit à une image")
         print("3. Débruiter une image bruitée")
-        print("4. Détecter les contours et filtrer l'image")
+        print("4. Détecter les contours")
         print("5. Quitter")
         choix = input("Choisissez une option : ")
         
@@ -167,7 +167,7 @@ def choisir_bruit():
             snr_multiplicative = calculate_snr(image_reference, noisy_multiplicative)
             
             # Afficher les résultats côte à côte
-            fig, axs = plt.subplots(1, 4, figsize=(20, 5))
+            fig, axs = plt.subplots(1, 4, figsize=(15, 5))
             axs[0].imshow(image_reference, cmap='gray')
             axs[0].set_title("Référence")
             axs[0].axis('off')
